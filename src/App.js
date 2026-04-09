@@ -55,6 +55,23 @@ const initialEdges = [
 
 let idCounter = 10;
 
+const SYSTEM_PROMPT = `You are an AI assistant for FlowBot HMI, a visual robot programming platform.
+When the user describes a robot workflow in plain English, you must respond ONLY with a valid JSON object in this exact format:
+{
+  "message": "A short friendly confirmation message",
+  "nodes": [
+    { "id": "1", "type": "startNode", "label": "Trigger: Manual", "x": 200, "y": 40 },
+    { "id": "2", "type": "moveToNode", "label": "Waypoint description", "x": 200, "y": 140 }
+  ],
+  "edges": [
+    { "from": "1", "to": "2" }
+  ]
+}
+Available node types: startNode, moveToNode, pickObjectNode, dropObjectNode, checkSensorNode, endNode.
+Every workflow MUST start with a startNode and end with an endNode.
+Space nodes 100px apart vertically starting at y:40. Always set x to 200.
+Respond ONLY with the JSON object, no extra text.`;
+
 export default function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -65,6 +82,14 @@ export default function App() {
   const simRef = useRef(null);
   const reactFlowWrapper = useRef(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
+
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([
+    { role: 'assistant', text: 'Hi! Describe a robot workflow in plain English and I will generate it for you.\n\nExample: "Pick a box from shelf 3 and drop it at station B"' }
+  ]);
+  const [chatInput, setChatInput] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const chatEndRef = useRef(null);
 
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
@@ -151,6 +176,79 @@ export default function App() {
     setLog([]);
     setStatus('Idle');
     setRunning(false);
+  };
+
+  const sendMessage = async () => {
+    if (!chatInput.trim() || aiLoading) return;
+
+    const userMsg = chatInput.trim();
+    setChatInput('');
+    setChatMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    setAiLoading(true);
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: userMsg }]
+        })
+      });
+
+      const data = await response.json();
+      const raw = data.content?.[0]?.text || '';
+
+      let parsed;
+      try {
+        const clean = raw.replace(/```json|```/g, '').trim();
+        parsed = JSON.parse(clean);
+      } catch {
+        setChatMessages(prev => [...prev, {
+          role: 'assistant',
+          text: "Sorry, I couldn't understand that. Try something like: 'Pick a box from shelf 2 and place it at drop zone A'"
+        }]);
+        setAiLoading(false);
+        return;
+      }
+
+      const newNodes = parsed.nodes.map(n => ({
+        id: String(idCounter++),
+        type: n.type,
+        position: { x: n.x || 200, y: n.y || 40 },
+        data: { label: n.label }
+      }));
+
+      const idMap = {};
+      parsed.nodes.forEach((n, i) => { idMap[n.id] = newNodes[i].id; });
+
+      const newEdges = parsed.edges.map((e, i) => ({
+        id: `ae-${idCounter++}-${i}`,
+        source: idMap[e.from],
+        target: idMap[e.to]
+      }));
+
+      setNodes(newNodes);
+      setEdges(newEdges);
+      setLog([]);
+      setStatus('Idle');
+
+      setChatMessages(prev => [...prev, {
+        role: 'assistant',
+        text: parsed.message || '✅ Workflow generated! You can now simulate or export it.'
+      }]);
+
+    } catch (err) {
+      setChatMessages(prev => [...prev, {
+        role: 'assistant',
+        text: '⚠ Connection error. Please check your API key and try again.'
+      }]);
+    }
+
+    setAiLoading(false);
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
   };
 
   const highlightedNodes = nodes.map(n => ({
@@ -290,6 +388,95 @@ export default function App() {
           Powered by ROS 2
         </div>
       </div>
+
+      {/* Floating AI Chat Button */}
+      <button
+        onClick={() => setChatOpen(o => !o)}
+        style={{
+          position: 'fixed', bottom: '24px', right: '24px',
+          width: '52px', height: '52px', borderRadius: '50%',
+          background: '#534AB7', border: 'none', cursor: 'pointer',
+          fontSize: '22px', color: '#fff', boxShadow: '0 4px 16px rgba(83,74,183,0.4)',
+          zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}
+        title="AI Workflow Generator"
+      >
+        {chatOpen ? '✕' : '✨'}
+      </button>
+
+      {/* AI Chat Panel */}
+      {chatOpen && (
+        <div style={{
+          position: 'fixed', bottom: '88px', right: '24px',
+          width: '340px', height: '460px',
+          background: '#fff', borderRadius: '16px',
+          border: '1px solid #ddd', boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          display: 'flex', flexDirection: 'column', zIndex: 999
+        }}>
+          {/* Chat Header */}
+          <div style={{ padding: '14px 16px', borderBottom: '1px solid #eee', background: '#534AB7', borderRadius: '16px 16px 0 0' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>✨ AI Workflow Generator</div>
+            <div style={{ fontSize: '11px', color: '#C8C4F0', marginTop: '2px' }}>Describe a task in plain English</div>
+          </div>
+
+          {/* Chat Messages */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
+            {chatMessages.map((msg, i) => (
+              <div key={i} style={{
+                marginBottom: '10px',
+                display: 'flex',
+                justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start'
+              }}>
+                <div style={{
+                  maxWidth: '80%', padding: '8px 12px', borderRadius: '12px',
+                  fontSize: '12px', lineHeight: 1.5,
+                  background: msg.role === 'user' ? '#534AB7' : '#f0f0ee',
+                  color: msg.role === 'user' ? '#fff' : '#333',
+                  borderBottomRightRadius: msg.role === 'user' ? '4px' : '12px',
+                  borderBottomLeftRadius: msg.role === 'assistant' ? '4px' : '12px',
+                  whiteSpace: 'pre-wrap'
+                }}>
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+            {aiLoading && (
+              <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '10px' }}>
+                <div style={{ padding: '8px 12px', borderRadius: '12px', background: '#f0f0ee', fontSize: '12px', color: '#888' }}>
+                  ⏳ Generating workflow...
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Chat Input */}
+          <div style={{ padding: '10px 12px', borderTop: '1px solid #eee', display: 'flex', gap: '8px' }}>
+            <input
+              value={chatInput}
+              onChange={e => setChatInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && sendMessage()}
+              placeholder="e.g. Pick box from shelf 3..."
+              style={{
+                flex: 1, fontSize: '12px', padding: '8px 10px',
+                borderRadius: '8px', border: '1px solid #ddd',
+                outline: 'none', fontFamily: 'sans-serif'
+              }}
+            />
+            <button
+              onClick={sendMessage}
+              disabled={aiLoading}
+              style={{
+                padding: '8px 12px', borderRadius: '8px', border: 'none',
+                background: aiLoading ? '#aaa' : '#534AB7', color: '#fff',
+                fontSize: '12px', fontWeight: 500, cursor: aiLoading ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Send
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );
