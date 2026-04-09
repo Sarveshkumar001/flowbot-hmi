@@ -27,30 +27,36 @@ const nodeTypes = {
 
 const sidebarNodes = [
   { type: 'startNode',       label: 'Start',       color: '#1D9E75' },
-  { type: 'moveToNode',      label: 'Move To',      color: '#378ADD' },
-  { type: 'pickObjectNode',  label: 'Pick Object',  color: '#7F77DD' },
-  { type: 'dropObjectNode',  label: 'Drop Object',  color: '#D85A30' },
-  { type: 'checkSensorNode', label: 'Check Sensor', color: '#BA7517' },
-  { type: 'endNode',         label: 'End',          color: '#888780' },
+  { type: 'moveToNode',      label: 'Move To',     color: '#378ADD' },
+  { type: 'pickObjectNode',  label: 'Pick Object', color: '#7F77DD' },
+  { type: 'dropObjectNode',  label: 'Drop Object', color: '#D85A30' },
+  { type: 'checkSensorNode', label: 'Check Sensor',color: '#BA7517' },
+  { type: 'endNode',         label: 'End',         color: '#888780' },
 ];
 
 const initialNodes = [
-  { id: '1', type: 'startNode',       position: { x: 200, y: 40  }, data: { label: 'Trigger: Manual' } },
-  { id: '2', type: 'moveToNode',      position: { x: 200, y: 140 }, data: { label: 'Waypoint A — Shelf 3' } },
-  { id: '3', type: 'pickObjectNode',  position: { x: 200, y: 240 }, data: { label: 'Gripper A — 2.4 kg' } },
-  { id: '4', type: 'checkSensorNode', position: { x: 200, y: 340 }, data: { label: 'Obstacle detected?' } },
-  { id: '5', type: 'moveToNode',      position: { x: 200, y: 440 }, data: { label: 'Waypoint B — Drop Zone' } },
-  { id: '6', type: 'dropObjectNode',  position: { x: 200, y: 540 }, data: { label: 'Release gripper' } },
-  { id: '7', type: 'endNode',         position: { x: 200, y: 640 }, data: { label: 'Workflow complete' } },
+  { id: '1', type: 'startNode',       position: { x: 400, y: 40  }, data: { label: 'Trigger: Manual' } },
+  { id: '2', type: 'moveToNode',      position: { x: 400, y: 140 }, data: { label: 'Waypoint A — Shelf 3' } },
+  { id: '3', type: 'pickObjectNode',  position: { x: 400, y: 240 }, data: { label: 'Gripper A — 2.4 kg' } },
+  { id: '4', type: 'checkSensorNode', position: { x: 400, y: 340 }, data: { label: 'Obstacle detected?' } },
+  { id: '5', type: 'moveToNode',      position: { x: 400, y: 440 }, data: { label: 'Waypoint B — Drop Zone' } },
+  { id: '6', type: 'dropObjectNode',  position: { x: 400, y: 540 }, data: { label: 'Release gripper' } },
+  { id: '7', type: 'endNode',         position: { x: 400, y: 640 }, data: { label: 'Workflow complete' } },
 ];
 
+const defaultEdgeOptions = {
+  className: 'edge-energy-pulse',
+  animated: true,
+  type: 'smoothstep'
+};
+
 const initialEdges = [
-  { id: 'e1-2', source: '1', target: '2' },
-  { id: 'e2-3', source: '2', target: '3' },
-  { id: 'e3-4', source: '3', target: '4' },
-  { id: 'e4-5', source: '4', target: '5' },
-  { id: 'e5-6', source: '5', target: '6' },
-  { id: 'e6-7', source: '6', target: '7' },
+  { id: 'e1-2', source: '1', target: '2', ...defaultEdgeOptions },
+  { id: 'e2-3', source: '2', target: '3', ...defaultEdgeOptions },
+  { id: 'e3-4', source: '3', target: '4', ...defaultEdgeOptions },
+  { id: 'e4-5', source: '4', target: '5', ...defaultEdgeOptions },
+  { id: 'e5-6', source: '5', target: '6', ...defaultEdgeOptions },
+  { id: 'e6-7', source: '6', target: '7', ...defaultEdgeOptions },
 ];
 
 let idCounter = 10;
@@ -60,8 +66,8 @@ When the user describes a robot workflow in plain English, you must respond ONLY
 {
   "message": "A short friendly confirmation message",
   "nodes": [
-    { "id": "1", "type": "startNode", "label": "Trigger: Manual", "x": 200, "y": 40 },
-    { "id": "2", "type": "moveToNode", "label": "Waypoint description", "x": 200, "y": 140 }
+    { "id": "1", "type": "startNode", "label": "Trigger: Manual", "x": 400, "y": 40 },
+    { "id": "2", "type": "moveToNode", "label": "Waypoint description", "x": 400, "y": 140 }
   ],
   "edges": [
     { "from": "1", "to": "2" }
@@ -69,7 +75,7 @@ When the user describes a robot workflow in plain English, you must respond ONLY
 }
 Available node types: startNode, moveToNode, pickObjectNode, dropObjectNode, checkSensorNode, endNode.
 Every workflow MUST start with a startNode and end with an endNode.
-Space nodes 100px apart vertically starting at y:40. Always set x to 200.
+Space nodes 100px apart vertically starting at y:40. Always set x to 400.
 Respond ONLY with the JSON object, no extra text.`;
 
 export default function App() {
@@ -92,7 +98,7 @@ export default function App() {
   const chatEndRef = useRef(null);
 
   const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
+    (params) => setEdges((eds) => addEdge({ ...params, ...defaultEdgeOptions }, eds)),
     [setEdges]
   );
 
@@ -180,7 +186,6 @@ export default function App() {
 
   const sendMessage = async () => {
     if (!chatInput.trim() || aiLoading) return;
-
     const userMsg = chatInput.trim();
     setChatInput('');
     setChatMessages(prev => [...prev, { role: 'user', text: userMsg }]);
@@ -217,7 +222,7 @@ export default function App() {
       const newNodes = parsed.nodes.map(n => ({
         id: String(idCounter++),
         type: n.type,
-        position: { x: n.x || 200, y: n.y || 40 },
+        position: { x: n.x || 400, y: n.y || 40 },
         data: { label: n.label }
       }));
 
@@ -227,24 +232,17 @@ export default function App() {
       const newEdges = parsed.edges.map((e, i) => ({
         id: `ae-${idCounter++}-${i}`,
         source: idMap[e.from],
-        target: idMap[e.to]
+        target: idMap[e.to],
+        ...defaultEdgeOptions
       }));
 
       setNodes(newNodes);
       setEdges(newEdges);
       setLog([]);
       setStatus('Idle');
-
-      setChatMessages(prev => [...prev, {
-        role: 'assistant',
-        text: parsed.message || '✅ Workflow generated! You can now simulate or export it.'
-      }]);
-
+      setChatMessages(prev => [...prev, { role: 'assistant', text: parsed.message || '✅ Workflow generated!' }]);
     } catch (err) {
-      setChatMessages(prev => [...prev, {
-        role: 'assistant',
-        text: '⚠ Connection error. Please check your API key and try again.'
-      }]);
+      setChatMessages(prev => [...prev, { role: 'assistant', text: '⚠ Connection error.' }]);
     }
 
     setAiLoading(false);
@@ -253,152 +251,149 @@ export default function App() {
 
   const highlightedNodes = nodes.map(n => ({
     ...n,
-    style: n.id === activeNodeId
-      ? { boxShadow: '0 0 0 3px #EF9F27', borderColor: '#EF9F27' }
-      : {}
+    data: {
+      ...n.data,
+      isActive: n.id === activeNodeId
+    }
   }));
 
   return (
-    <div style={{ display: 'flex', height: '100vh', fontFamily: 'sans-serif' }}>
-
-      {/* Sidebar */}
-      <div style={{ width: '170px', background: '#f5f5f3', borderRight: '1px solid #ddd', display: 'flex', flexDirection: 'column', padding: '12px 0' }}>
-        <div style={{ padding: '0 12px 12px', borderBottom: '1px solid #ddd', marginBottom: '8px' }}>
-          <div style={{ fontSize: '15px', fontWeight: 700, color: '#1D9E75' }}>⚙ FlowBot HMI</div>
-          <div style={{ fontSize: '10px', color: '#aaa', marginTop: '2px' }}>Visual Robot Programming</div>
-        </div>
-        <div style={{ fontSize: '11px', fontWeight: 600, color: '#888', padding: '0 12px 8px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-          Node Library
-        </div>
-        {sidebarNodes.map(n => (
-          <div
-            key={n.type}
-            draggable
-            onDragStart={(e) => {
-              e.dataTransfer.setData('application/reactflow-type', n.type);
-              e.dataTransfer.setData('application/reactflow-label', n.label);
-            }}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 12px', fontSize: '12px', cursor: 'grab', borderRadius: '6px', margin: '2px 8px' }}
-            onMouseEnter={e => e.currentTarget.style.background = '#ebebea'}
-            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-          >
-            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: n.color, display: 'inline-block', flexShrink: 0 }}></span>
-            {n.label}
-          </div>
-        ))}
-        <div style={{ flex: 1 }} />
-        <div style={{ fontSize: '10px', color: '#aaa', padding: '10px 12px', borderTop: '1px solid #ddd' }}>
-          Drag nodes onto canvas
-        </div>
+    <div className="flex h-screen w-screen bg-3d-grid font-sans text-white overflow-hidden relative">
+      
+      {/* Top Navigation Bar - Floating Header */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-6 py-3 bg-gray-900/60 backdrop-blur-md border border-white/10 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+        <span className="font-semibold text-sm tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-blue-500">
+          FACTORY-NET // FLOWBOT HMI
+        </span>
+        <div className="w-px h-4 bg-white/20 mx-2"></div>
+        <button
+          onClick={exportToROS2}
+          className="text-xs px-4 py-1.5 rounded-full border border-blue-500/50 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 transition-all"
+        >
+          EXPORT TO ROS2
+        </button>
+        <button
+          onClick={reset}
+          className="text-xs px-4 py-1.5 rounded-full border border-gray-500/50 bg-gray-500/10 hover:bg-gray-500/30 transition-all text-gray-300"
+        >
+          RESET
+        </button>
+        <button
+          onClick={simulate}
+          disabled={running}
+          className={`text-xs px-5 py-1.5 rounded-full border font-medium tracking-wider transition-all shadow-[0_0_15px_rgba(29,158,117,0.4)] ${running ? 'border-gray-500 bg-gray-600/50 text-gray-400 cursor-not-allowed' : 'border-teal-400 bg-teal-500/20 text-teal-300 hover:bg-teal-500/40 hover:shadow-[0_0_25px_rgba(29,158,117,0.6)]'}`}
+        >
+          {running ? 'SIMULATING...' : 'SIMULATE'}
+        </button>
       </div>
 
-      {/* Canvas */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderBottom: '1px solid #ddd', background: '#fff' }}>
-          <span style={{ flex: 1, fontWeight: 600, fontSize: '14px', color: '#222' }}>
-            🏭 FlowBot HMI — Visual Robot Programming Platform
-          </span>
-          <button
-            onClick={exportToROS2}
-            style={{ fontSize: '12px', padding: '5px 12px', borderRadius: '6px', border: '1px solid #378ADD', background: '#E6F1FB', color: '#185FA5', fontWeight: 500, cursor: 'pointer' }}
-          >
-            ⬇ Export to ROS 2
-          </button>
-          <button
-            onClick={reset}
-            style={{ fontSize: '12px', padding: '5px 12px', borderRadius: '6px', border: '1px solid #ddd', background: '#fff', cursor: 'pointer' }}
-          >
-            Reset
-          </button>
-          <button
-            onClick={simulate}
-            disabled={running}
-            style={{ fontSize: '12px', padding: '5px 14px', borderRadius: '6px', border: 'none', background: running ? '#aaa' : '#1D9E75', color: '#fff', fontWeight: 500, cursor: running ? 'not-allowed' : 'pointer' }}
-          >
-            {running ? '⏳ Running...' : '▶ Simulate'}
-          </button>
-        </div>
-        <div ref={reactFlowWrapper} style={{ flex: 1 }}>
-          <ReactFlow
-            nodes={highlightedNodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onInit={setReactFlowInstance}
-            onDrop={onDrop}
-            onDragOver={onDragOver}
-            nodeTypes={nodeTypes}
-            fitView
-          >
-            <Controls />
-            <Background gap={22} size={1} />
-          </ReactFlow>
-        </div>
+      {/* Main Canvas Area */}
+      <div ref={reactFlowWrapper} className="w-full h-full">
+        <ReactFlow
+          nodes={highlightedNodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onInit={setReactFlowInstance}
+          onDrop={onDrop}
+          onDragOver={onDragOver}
+          nodeTypes={nodeTypes}
+          fitView
+          className="bg-transparent"
+        >
+          <Controls className="!bg-gray-800/80 !border-white/10 !backdrop-blur-md fill-white" />
+        </ReactFlow>
       </div>
 
-      {/* Status Panel */}
-      <div style={{ width: '200px', background: '#f5f5f3', borderLeft: '1px solid #ddd', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ fontSize: '11px', fontWeight: 600, color: '#888', padding: '10px 12px 6px', letterSpacing: '0.06em', textTransform: 'uppercase', borderBottom: '1px solid #ddd' }}>
-          Robot Status
+      {/* Node Library Floating Panel */}
+      <div className="absolute top-24 left-6 z-40 w-52 bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col">
+        <div className="px-4 py-3 border-b border-white/10 bg-white/5">
+          <div className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">Node Library</div>
         </div>
-        <div style={{ padding: '10px 12px', borderBottom: '1px solid #ddd' }}>
-          <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>State</div>
-          <div style={{ fontSize: '13px', fontWeight: 500, color: status === 'Complete ✓' ? '#1D9E75' : status === 'Running' ? '#BA7517' : '#222' }}>
-            {status}
-          </div>
-        </div>
-        <div style={{ padding: '10px 12px', borderBottom: '1px solid #ddd' }}>
-          <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>Active node</div>
-          <div style={{ fontSize: '12px', fontWeight: 500 }}>
-            {activeNodeId ? nodes.find(n => n.id === activeNodeId)?.data?.label || '—' : '—'}
-          </div>
-        </div>
-        <div style={{ padding: '10px 12px', borderBottom: '1px solid #ddd' }}>
-          <div style={{ fontSize: '10px', color: '#888', marginBottom: '4px' }}>Battery</div>
-          <div style={{ background: '#eee', borderRadius: '4px', height: '6px', overflow: 'hidden' }}>
-            <div style={{ width: '87%', height: '100%', background: '#1D9E75', borderRadius: '4px' }}></div>
-          </div>
-          <div style={{ fontSize: '10px', color: '#888', marginTop: '2px' }}>87%</div>
-        </div>
-        <div style={{ padding: '10px 12px', borderBottom: '1px solid #ddd' }}>
-          <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>Speed</div>
-          <div style={{ fontSize: '12px', fontWeight: 500, color: running ? '#BA7517' : '#888' }}>
-            {running ? '0.8 m/s' : '0.0 m/s'}
-          </div>
-        </div>
-        <div style={{ padding: '10px 12px', borderBottom: '1px solid #ddd' }}>
-          <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>Total nodes</div>
-          <div style={{ fontSize: '12px', fontWeight: 500 }}>{nodes.length}</div>
-        </div>
-        <div style={{ fontSize: '11px', fontWeight: 600, color: '#888', padding: '10px 12px 4px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-          Execution Log
-        </div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '6px 12px' }}>
-          {log.length === 0 && (
-            <div style={{ fontSize: '11px', color: '#bbb' }}>No logs yet...</div>
-          )}
-          {log.map((entry, i) => (
-            <div key={i} style={{ fontSize: '11px', color: '#555', padding: '3px 0', borderBottom: '1px solid #eee', lineHeight: 1.5 }}>
-              {entry}
+        <div className="p-3 space-y-2">
+          {sidebarNodes.map(n => (
+            <div
+              key={n.type}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('application/reactflow-type', n.type);
+                e.dataTransfer.setData('application/reactflow-label', n.label);
+              }}
+              className="flex items-center gap-3 px-3 py-2 text-xs cursor-grab rounded-xl bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all outline-none"
+            >
+              <div 
+                className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_currentColor]" 
+                style={{ backgroundColor: n.color, color: n.color }}
+              ></div>
+              <span className="text-gray-200 font-medium">{n.label}</span>
             </div>
           ))}
         </div>
-        <div style={{ padding: '10px 12px', borderTop: '1px solid #ddd', fontSize: '10px', color: '#aaa', textAlign: 'center' }}>
-          Powered by ROS 2
+        <div className="p-3 text-[10px] text-gray-500 border-t border-white/10 text-center uppercase tracking-wider">
+          Drag to add nodes
+        </div>
+      </div>
+
+      {/* Status Panel Floating Panel */}
+      <div className="absolute top-24 right-6 z-40 w-64 bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex flex-col h-[calc(100vh-160px)]">
+        <div className="px-4 py-3 border-b border-white/10 bg-white/5">
+          <div className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">System Status</div>
+        </div>
+        
+        <div className="p-4 border-b border-white/10 grid grid-cols-2 gap-4">
+          <div>
+            <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">State</div>
+            <div className={`text-sm font-semibold tracking-wide ${status === 'Complete ✓' ? 'text-teal-400' : status === 'Running' ? 'text-orange-400' : 'text-gray-200'}`}>
+              {status}
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Speed</div>
+            <div className={`text-sm font-semibold tracking-wide ${running ? 'text-orange-400' : 'text-gray-500'}`}>
+              {running ? '0.8 m/s' : '0.0 m/s'}
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 border-b border-white/10">
+          <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Active Routine</div>
+          <div className="text-xs text-gray-200 font-medium whitespace-nowrap overflow-hidden text-ellipsis">
+            {activeNodeId ? nodes.find(n => n.id === activeNodeId)?.data?.label || '—' : '—'}
+          </div>
+        </div>
+
+        <div className="p-4 border-b border-white/10">
+          <div className="flex justify-between items-end mb-2">
+            <div className="text-[10px] text-gray-500 uppercase tracking-wider">Core Power</div>
+            <div className="text-[10px] text-teal-400 font-bold">87%</div>
+          </div>
+          <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+            <div className="w-[87%] h-full bg-teal-400 shadow-[0_0_10px_rgba(29,158,117,1)]"></div>
+          </div>
+        </div>
+
+        <div className="px-4 py-3 border-b border-white/10 bg-white/5 mt-auto">
+          <div className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">Telemetry Log</div>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {log.length === 0 && (
+            <div className="text-xs text-gray-600 italic">Listening for telemetry...</div>
+          )}
+          {log.map((entry, i) => (
+            <div key={i} className="text-[11px] text-gray-300 font-mono tracking-tight leading-relaxed">
+              <span className="text-blue-400 opacity-70 mr-2">[{String(i).padStart(3, '0')}]</span>
+              {entry}
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Floating AI Chat Button */}
       <button
         onClick={() => setChatOpen(o => !o)}
-        style={{
-          position: 'fixed', bottom: '24px', right: '24px',
-          width: '52px', height: '52px', borderRadius: '50%',
-          background: '#534AB7', border: 'none', cursor: 'pointer',
-          fontSize: '22px', color: '#fff', boxShadow: '0 4px 16px rgba(83,74,183,0.4)',
-          zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }}
+        className="absolute bottom-6 right-6 w-14 h-14 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full flex items-center justify-center text-2xl shadow-[0_0_20px_rgba(79,70,229,0.5)] z-50 transition-all hover:scale-105 border border-indigo-400/50"
         title="AI Workflow Generator"
       >
         {chatOpen ? '✕' : '✨'}
@@ -406,73 +401,52 @@ export default function App() {
 
       {/* AI Chat Panel */}
       {chatOpen && (
-        <div style={{
-          position: 'fixed', bottom: '88px', right: '24px',
-          width: '340px', height: '460px',
-          background: '#fff', borderRadius: '16px',
-          border: '1px solid #ddd', boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-          display: 'flex', flexDirection: 'column', zIndex: 999
-        }}>
-          {/* Chat Header */}
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid #eee', background: '#534AB7', borderRadius: '16px 16px 0 0' }}>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>✨ AI Workflow Generator</div>
-            <div style={{ fontSize: '11px', color: '#C8C4F0', marginTop: '2px' }}>Describe a task in plain English</div>
+        <div className="absolute bottom-24 right-6 w-80 h-[460px] bg-gray-900/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.6)] flex flex-col z-50 overflow-hidden">
+          <div className="px-4 py-3 bg-indigo-600/30 border-b border-indigo-500/30 flex flex-col">
+            <span className="text-sm font-semibold text-white tracking-wide text-shadow">✨ AI Co-Pilot</span>
+            <span className="text-[10px] text-indigo-200">Natural language workflow generator</span>
           </div>
 
-          {/* Chat Messages */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {chatMessages.map((msg, i) => (
-              <div key={i} style={{
-                marginBottom: '10px',
-                display: 'flex',
-                justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start'
-              }}>
-                <div style={{
-                  maxWidth: '80%', padding: '8px 12px', borderRadius: '12px',
-                  fontSize: '12px', lineHeight: 1.5,
-                  background: msg.role === 'user' ? '#534AB7' : '#f0f0ee',
-                  color: msg.role === 'user' ? '#fff' : '#333',
-                  borderBottomRightRadius: msg.role === 'user' ? '4px' : '12px',
-                  borderBottomLeftRadius: msg.role === 'assistant' ? '4px' : '12px',
-                  whiteSpace: 'pre-wrap'
-                }}>
+              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[85%] px-3 py-2 text-xs leading-relaxed rounded-xl shadow-lg border ${
+                  msg.role === 'user' 
+                    ? 'bg-indigo-600/80 text-white rounded-br-sm border-indigo-500/50' 
+                    : 'bg-gray-800/80 text-gray-200 rounded-bl-sm border-gray-600/50'
+                }`}>
                   {msg.text}
                 </div>
               </div>
             ))}
             {aiLoading && (
-              <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '10px' }}>
-                <div style={{ padding: '8px 12px', borderRadius: '12px', background: '#f0f0ee', fontSize: '12px', color: '#888' }}>
-                  ⏳ Generating workflow...
+              <div className="flex justify-start">
+                <div className="px-3 py-2 text-xs rounded-xl bg-gray-800/80 text-indigo-300 rounded-bl-sm border border-gray-600/50 flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></div>
+                  <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                  <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
                 </div>
               </div>
             )}
             <div ref={chatEndRef} />
           </div>
 
-          {/* Chat Input */}
-          <div style={{ padding: '10px 12px', borderTop: '1px solid #eee', display: 'flex', gap: '8px' }}>
+          <div className="p-3 border-t border-white/10 bg-black/20 flex gap-2">
             <input
               value={chatInput}
               onChange={e => setChatInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && sendMessage()}
-              placeholder="e.g. Pick box from shelf 3..."
-              style={{
-                flex: 1, fontSize: '12px', padding: '8px 10px',
-                borderRadius: '8px', border: '1px solid #ddd',
-                outline: 'none', fontFamily: 'sans-serif'
-              }}
+              placeholder="e.g. Deploy to sector 7..."
+              className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-400 transition-colors"
             />
             <button
               onClick={sendMessage}
               disabled={aiLoading}
-              style={{
-                padding: '8px 12px', borderRadius: '8px', border: 'none',
-                background: aiLoading ? '#aaa' : '#534AB7', color: '#fff',
-                fontSize: '12px', fontWeight: 500, cursor: aiLoading ? 'not-allowed' : 'pointer'
-              }}
+              className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                aiLoading ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_10px_rgba(79,70,229,0.4)]'
+              }`}
             >
-              Send
+              SEND
             </button>
           </div>
         </div>

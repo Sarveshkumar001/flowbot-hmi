@@ -1,11 +1,27 @@
 import { Handle, Position } from 'reactflow';
+
 export default function EndNode({ data }) {
   return (
-    <div style={{ background: '#F1EFE8', border: '1.5px solid #888780', borderRadius: '10px', padding: '10px 14px', minWidth: '130px', fontFamily: 'sans-serif' }}>
-      <div style={{ fontSize: '13px', marginBottom: '4px' }}>🏁</div>
-      <div style={{ fontWeight: 500, fontSize: '13px', color: '#2C2C2A' }}>End</div>
-      <div style={{ fontSize: '11px', color: '#5F5E5A', marginTop: '2px' }}>{data?.label || 'Workflow complete'}</div>
-      <Handle type="target" position={Position.Top} style={{ background: '#888780', width: '10px', height: '10px', border: '2px solid #fff' }} />
+    <div className={`group relative min-w-[140px] rounded-xl px-4 py-3 transition-all duration-300 transform 
+                    ${data.isActive 
+                      ? 'scale-105 shadow-[0_0_25px_rgba(156,163,175,0.6)] border-gray-400 bg-gray-800/90 backdrop-blur-xl -translate-y-1' 
+                      : 'hover:scale-105 hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(156,163,175,0.2)] shadow-lg border-white/10 bg-gray-900/60 backdrop-blur-md'
+                    } border`}>
+      <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-gray-500/10 to-transparent pointer-events-none"></div>
+      <Handle 
+        type="target" 
+        position={Position.Top} 
+        className="!w-3 !h-3 !bg-gray-400 !border-2 !border-gray-900 !shadow-[0_0_10px_rgba(156,163,175,0.8)] transition-all group-hover:scale-125" 
+      />
+      <div className="relative z-10">
+        <div className="text-sm mb-1 flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-gray-400 shadow-[0_0_8px_rgba(156,163,175,1)]"></div>
+          <span className="font-semibold text-gray-300 tracking-wider">END</span>
+        </div>
+        <div className="text-[11px] text-gray-400 mt-1 font-medium tracking-wide">
+          {data?.label || 'Workflow End'}
+        </div>
+      </div>
     </div>
   );
 }
